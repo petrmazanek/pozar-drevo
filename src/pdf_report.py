@@ -5,12 +5,27 @@ from io import BytesIO
 from datetime import datetime
 from dataclasses import dataclass
 from typing import Any
+import unicodedata
 
 from fpdf import FPDF
 
 from .materials import TimberMaterial
 from .sections import RectangularSection
 from .loads import LoadCase, LOAD_DURATION_NAMES
+
+
+def remove_diacritics(text: str) -> str:
+    """Odstraní diakritiku z textu pro kompatibilitu s Helvetica fontem."""
+    # Speciální české znaky
+    replacements = {
+        'ě': 'e', 'š': 's', 'č': 'c', 'ř': 'r', 'ž': 'z', 'ý': 'y', 'á': 'a',
+        'í': 'i', 'é': 'e', 'ú': 'u', 'ů': 'u', 'ť': 't', 'ď': 'd', 'ň': 'n',
+        'Ě': 'E', 'Š': 'S', 'Č': 'C', 'Ř': 'R', 'Ž': 'Z', 'Ý': 'Y', 'Á': 'A',
+        'Í': 'I', 'É': 'E', 'Ú': 'U', 'Ů': 'U', 'Ť': 'T', 'Ď': 'D', 'Ň': 'N',
+    }
+    for cz, ascii_char in replacements.items():
+        text = text.replace(cz, ascii_char)
+    return text
 
 
 class TimberReportPDF(FPDF):
@@ -134,9 +149,9 @@ def generate_pdf_report(
 
     # === HLAVIČKA ===
     pdf.set_font("Helvetica", "", 10)
-    pdf.cell(95, 6, f"Projekt: {project_name or '-'}", new_x="RIGHT")
+    pdf.cell(95, 6, f"Projekt: {remove_diacritics(project_name) or '-'}", new_x="RIGHT")
     pdf.cell(95, 6, f"Datum: {datetime.now().strftime('%d.%m.%Y')}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(95, 6, f"Zpracoval: {author or '-'}", new_x="RIGHT")
+    pdf.cell(95, 6, f"Zpracoval: {remove_diacritics(author) or '-'}", new_x="RIGHT")
     pdf.cell(95, 6, "", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
 
@@ -147,7 +162,7 @@ def generate_pdf_report(
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(0, 6, "Material:", new_x="LMARGIN", new_y="NEXT")
     pdf.add_row("Trida pevnosti:", material.name)
-    pdf.add_row("Typ dreva:", "Rostlé" if material.timber_type == "solid" else "Lepene lamelove")
+    pdf.add_row("Typ dreva:", "Rostle" if material.timber_type == "solid" else "Lepene lamelove")
     pdf.add_row("fm,k =", f"{material.fm_k}", "MPa")
     pdf.add_row("fv,k =", f"{material.fv_k}", "MPa")
     pdf.add_row("E0,mean =", f"{material.E_0_mean}", "MPa")
@@ -171,7 +186,7 @@ def generate_pdf_report(
     pdf.add_row("Stale zatizeni gk =", f"{load.g_k:.2f}", "kN/m")
     pdf.add_row("Promenne zatizeni qk =", f"{load.q_k:.2f}", "kN/m")
     pdf.add_row("Trida provozu:", f"{load.service_class}")
-    pdf.add_row("Doba trvani zatizeni:", LOAD_DURATION_NAMES.get(load.load_duration, load.load_duration))
+    pdf.add_row("Doba trvani zatizeni:", remove_diacritics(LOAD_DURATION_NAMES.get(load.load_duration, load.load_duration)))
     pdf.add_row("kmod =", f"{load.kmod:.2f}")
     pdf.ln(5)
 

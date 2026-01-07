@@ -138,6 +138,75 @@ with st.expander("Pokročilé nastavení"):
             index=3,  # L/300
         )
 
+# === DOKUMENTACE METODY ===
+with st.expander("Dokumentace výpočtu (ČSN EN 1995-1-1)"):
+    st.markdown("""
+### Posudek dřevěného nosníku dle ČSN EN 1995-1-1
+
+#### 1. Návrhové hodnoty pevnosti (čl. 2.4.1)
+```
+fd = kmod × fk / γM
+```
+
+| Součinitel | Popis |
+|------------|-------|
+| **kmod** | Modifikační součinitel zohledňující vliv trvání zatížení a vlhkosti (tab. 3.1) |
+| **γM** | Dílčí součinitel materiálu: 1,3 (rostlé), 1,25 (lepené) |
+
+#### 2. Posudek ohybu (čl. 6.1.6)
+```
+σm,d = MEd / Wy ≤ fm,d
+```
+
+Pro prostý nosník s rovnoměrným zatížením:
+```
+MEd = qEd × L² / 8
+qEd = 1,35×gk + 1,5×qk
+```
+
+#### 3. Posudek smyku (čl. 6.1.7)
+```
+τd = 1,5 × VEd / (kcr × A) ≤ fv,d
+```
+
+| Parametr | Hodnota | Význam |
+|----------|---------|--------|
+| **kcr** | 0,67 | Součinitel trhlin (rostlé i lepené) |
+| **VEd** | qEd×L/2 | Posouvající síla na podpoře |
+
+#### 4. Posudek klopení (čl. 6.3.3)
+```
+σm,d / (kcrit × fm,d) ≤ 1,0
+```
+
+**Výpočet kcrit:**
+- λrel,m ≤ 0,75: kcrit = 1,0
+- 0,75 < λrel,m ≤ 1,4: kcrit = 1,56 - 0,75×λrel,m
+- λrel,m > 1,4: kcrit = 1/λrel,m²
+
+**Poměrná štíhlost:**
+```
+λrel,m = √(fm,k / σm,crit)
+σm,crit = 0,78 × b² × E0,05 / (h × lef)
+```
+
+#### 5. Posudek průhybu (čl. 7.2)
+```
+winst = 5 × q × L⁴ / (384 × E × I)
+wfin = winst,G × (1+kdef) + winst,Q × (1+ψ2×kdef)
+wfin ≤ wlim = L/300
+```
+
+| Třída provozu | kdef |
+|---------------|------|
+| 1 (suchá) | 0,6 |
+| 2 (vlhká) | 0,8 |
+| 3 (mokrá) | 2,0 |
+
+---
+*Statické schéma: Prostý nosník s rovnoměrným spojitým zatížením*
+    """)
+
 # === POŽÁRNÍ ODOLNOST ===
 with st.expander("Požární odolnost (ČSN EN 1995-1-2)"):
     col_fire1, col_fire2, col_fire3 = st.columns(3)
@@ -163,6 +232,81 @@ with st.expander("Požární odolnost (ČSN EN 1995-1-2)"):
             disabled=not fire_enabled,
             help="3 strany = nosník zapuštěný do stropu, 4 strany = volně stojící",
         )
+
+    # Dokumentace metody
+    with st.container():
+        st.markdown("---")
+        show_docs = st.checkbox("Zobrazit dokumentaci metody", value=False)
+        if show_docs:
+            st.markdown("""
+### Metoda redukovaného průřezu dle ČSN EN 1995-1-2
+
+#### Princip metody (čl. 4.2.2)
+Metoda spočívá ve **zmenšení rozměrů průřezu** o efektivní hloubku zuhelnatění.
+Mechanické vlastnosti zbytkového průřezu se uvažují v plné hodnotě.
+
+#### Postup výpočtu
+
+**KROK 1: Rychlost zuhelnatění** (tab. 3.1)
+
+| Materiál | β₀ [mm/min] | βₙ [mm/min] |
+|----------|-------------|-------------|
+| Rostlé jehličnaté | 0,65 | 0,80 |
+| Lepené lamelové | 0,65 | 0,70 |
+
+*βₙ = normová rychlost (zahrnuje vliv zaoblení rohů a trhlin)*
+
+**KROK 2: Hloubka zuhelnatění** (vzorec 3.2)
+```
+dchar,n = βn × t
+```
+
+**KROK 3: Efektivní hloubka** (vzorec 4.1)
+```
+def = dchar,n + d0
+```
+kde d₀ = 7 mm (vrstva s nulovými mechanickými vlastnostmi)
+
+**KROK 4: Redukovaný průřez**
+
+*3 strany (nosník v stropu):*
+```
+bfi = b - 2×def
+hfi = h - def
+```
+
+*4 strany (volný nosník):*
+```
+bfi = b - 2×def
+hfi = h - 2×def
+```
+
+**KROK 5: Redukce zatížení** (vzorec 2.8)
+```
+Ed,fi = ηfi × Ed
+ηfi = (Gk + ψ1×Qk) / (1,35×Gk + 1,5×Qk)
+```
+
+**KROK 6: Návrhová pevnost při požáru** (vzorec 4.2)
+```
+fd,fi = kmod,fi × kfi × fk / γM,fi
+```
+
+| Součinitel | Hodnota | Význam |
+|------------|---------|--------|
+| kmod,fi | 1,0 | Modifikační součinitel |
+| kfi | 1,25 | Přechod na 20% kvantil |
+| γM,fi | 1,0 | Dílčí součinitel materiálu |
+
+**KROK 7: Posouzení**
+```
+σm,d,fi = MEd,fi / Wfi ≤ fm,d,fi
+τd,fi = 1,5 × VEd,fi / Afi ≤ fv,d,fi
+```
+
+---
+*Poznámka: Pro finální dokumentaci ověřte výsledky autorizovaným inženýrem.*
+            """)
 
 
 # === VÝPOČET ===
