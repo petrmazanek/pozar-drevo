@@ -21,3 +21,7 @@ Thumbs.db
 # Project
 *.pdf
 .claude/
+
+# Citlive soubory
+.env
+.env.*
